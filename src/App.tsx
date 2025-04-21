@@ -9,7 +9,6 @@ import Leaderboard from './pages/Leaderboard';
 import TechnicalQuiz from './games/TechnicalQuiz';
 import TicTacToe from './games/TicTacToe';
 import TowerOfHanoi from './games/TowerOfHanoi';
-import WordScramble from './games/WordScramble';
 
 const theme = createTheme({
   palette: {
@@ -35,7 +34,6 @@ function App() {
           <Route path="/games/technical-quiz" element={<TechnicalQuiz />} />
           <Route path="/games/tic-tac-toe" element={<TicTacToe />} />
           <Route path="/games/tower-of-hanoi" element={<TowerOfHanoi />} />
-          <Route path="/games/word-scramble" element={<WordScramble />} />
         </Routes>
       </Router>
     </ThemeProvider>
