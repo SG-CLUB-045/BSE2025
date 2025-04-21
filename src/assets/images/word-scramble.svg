@@ -2,32 +2,27 @@
   <rect width="400" height="200" fill="#f0f0f0"/>
   <text x="200" y="50" font-family="Arial" font-size="24" text-anchor="middle" fill="#333">Word Scramble</text>
   
-  <!-- Scrambled letters -->
-  <g transform="translate(100, 100)">
-    <rect x="0" y="0" width="40" height="40" fill="#1976d2" rx="5"/>
-    <text x="20" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="white">S</text>
+  <!-- Scrambled letters in a more centered layout -->
+  <g transform="translate(80, 100)">
+    <rect x="0" y="0" width="48" height="48" fill="#1976d2" rx="6"/>
+    <text x="24" y="32" font-family="Arial" font-size="24" text-anchor="middle" fill="white">W</text>
     
-    <rect x="50" y="0" width="40" height="40" fill="#dc004e" rx="5"/>
-    <text x="70" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="white">C</text>
+    <rect x="58" y="0" width="48" height="48" fill="#dc004e" rx="6"/>
+    <text x="82" y="32" font-family="Arial" font-size="24" text-anchor="middle" fill="white">O</text>
     
-    <rect x="100" y="0" width="40" height="40" fill="#1976d2" rx="5"/>
-    <text x="120" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="white">R</text>
+    <rect x="116" y="0" width="48" height="48" fill="#1976d2" rx="6"/>
+    <text x="140" y="32" font-family="Arial" font-size="24" text-anchor="middle" fill="white">R</text>
     
-    <rect x="150" y="0" width="40" height="40" fill="#dc004e" rx="5"/>
-    <text x="170" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="white">A</text>
+    <rect x="174" y="0" width="48" height="48" fill="#dc004e" rx="6"/>
+    <text x="198" y="32" font-family="Arial" font-size="24" text-anchor="middle" fill="white">D</text>
     
-    <rect x="200" y="0" width="40" height="40" fill="#1976d2" rx="5"/>
-    <text x="220" y="25" font-family="Arial" font-size="20" text-anchor="middle" fill="white">M</text>
+    <rect x="232" y="0" width="48" height="48" fill="#1976d2" rx="6"/>
+    <text x="256" y="32" font-family="Arial" font-size="24" text-anchor="middle" fill="white">S</text>
   </g>
   
-  <!-- Arrow pointing to solution -->
-  <path d="M 250 100 L 280 100" stroke="#333" stroke-width="3" marker-end="url(#arrowhead)"/>
-  <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#333"/>
-    </marker>
-  </defs>
-  
-  <!-- Solution word -->
-  <text x="300" y="105" font-family="Arial" font-size="20" text-anchor="middle" fill="#333">SCRAM</text>
+  <!-- Decorative elements -->
+  <circle cx="50" cy="160" r="15" fill="#1976d2" opacity="0.2"/>
+  <circle cx="350" cy="40" r="15" fill="#dc004e" opacity="0.2"/>
+  <circle cx="30" cy="40" r="10" fill="#1976d2" opacity="0.2"/>
+  <circle cx="370" cy="160" r="10" fill="#dc004e" opacity="0.2"/>
 </svg> 
