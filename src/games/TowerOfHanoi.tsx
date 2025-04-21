@@ -115,7 +115,7 @@ const TowerOfHanoi = () => {
                 }}
                 onClick={() => handleRodClick(rodIndex)}
               >
-                {rod.map((disk, diskIndex) => (
+                {[...rod].reverse().map((disk, diskIndex) => (
                   <Box
                     key={diskIndex}
                     sx={{
