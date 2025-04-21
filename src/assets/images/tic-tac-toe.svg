@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+  <rect width="400" height="200" fill="#f0f0f0"/>
+  <text x="200" y="50" font-family="Arial" font-size="24" text-anchor="middle" fill="#333">Tic Tac Toe</text>
+  
+  <!-- Game board -->
+  <rect x="100" y="80" width="120" height="120" fill="white" stroke="#333" stroke-width="2"/>
+  
+  <!-- Grid lines -->
+  <line x1="140" y1="80" x2="140" y2="200" stroke="#333" stroke-width="2"/>
+  <line x1="180" y1="80" x2="180" y2="200" stroke="#333" stroke-width="2"/>
+  <line x1="100" y1="120" x2="220" y2="120" stroke="#333" stroke-width="2"/>
+  <line x1="100" y1="160" x2="220" y2="160" stroke="#333" stroke-width="2"/>
+  
+  <!-- X and O -->
+  <text x="110" y="135" font-family="Arial" font-size="30" text-anchor="middle" fill="#1976d2">X</text>
+  <text x="150" y="135" font-family="Arial" font-size="30" text-anchor="middle" fill="#dc004e">O</text>
+  <text x="190" y="135" font-family="Arial" font-size="30" text-anchor="middle" fill="#1976d2">X</text>
+</svg> 
