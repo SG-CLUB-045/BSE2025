@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { Container, Paper, TextField, Button, Typography, Box } from '@mui/material';
+import { Container, Paper, TextField, Button, Typography, Box, Alert, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const Registration = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
+    mobileNumber: '',
     age: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -19,11 +24,41 @@ const Registration = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically handle the registration logic
-    // For now, we'll just navigate to the games page
-    navigate('/games');
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Validate mobile number format
+      const mobileRegex = /^[0-9]{10}$/;
+      if (!mobileRegex.test(formData.mobileNumber)) {
+        throw new Error('Please enter a valid 10-digit mobile number');
+      }
+      
+      // Add user data to Firestore
+      const usersCollection = collection(db, 'users');
+      await addDoc(usersCollection, {
+        name: formData.name,
+        email: formData.email,
+        mobileNumber: formData.mobileNumber,
+        age: parseInt(formData.age),
+        createdAt: new Date()
+      });
+      
+      // Navigate to games page on success
+      navigate('/games');
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   return (
@@ -55,13 +90,14 @@ const Registration = () => {
             />
             <TextField
               fullWidth
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
+              label="Mobile Number"
+              name="mobileNumber"
+              value={formData.mobileNumber}
               onChange={handleChange}
               margin="normal"
               required
+              placeholder="10-digit mobile number"
+              inputProps={{ maxLength: 10 }}
             />
             <TextField
               fullWidth
@@ -72,6 +108,7 @@ const Registration = () => {
               onChange={handleChange}
               margin="normal"
               required
+              inputProps={{ min: 1, max: 120 }}
             />
             <Button
               type="submit"
@@ -80,12 +117,24 @@ const Registration = () => {
               fullWidth
               size="large"
               sx={{ mt: 3 }}
+              disabled={loading}
             >
-              Register
+              {loading ? 'Registering...' : 'Register'}
             </Button>
           </form>
         </Paper>
       </Box>
+      
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
