@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Paper, Typography, Button, Box } from '@mui/material';
+import { Container, Paper, Typography, Button, Box, Alert, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 type Rod = number[];
 type GameState = {
@@ -12,12 +13,16 @@ type GameState = {
 
 const TowerOfHanoi = () => {
   const navigate = useNavigate();
+  const { user, updateUserScore } = useUser();
   const [gameState, setGameState] = useState<GameState>({
     rods: [[], [], []],
     selectedRod: null,
     moves: 0,
     minMoves: 0
   });
+  const [message, setMessage] = useState('');
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
 
   useEffect(() => {
     initializeGame();
@@ -32,6 +37,7 @@ const TowerOfHanoi = () => {
       moves: 0,
       minMoves: Math.pow(2, numDisks) - 1
     });
+    setGameCompleted(false);
   };
 
   const handleRodClick = (rodIndex: number) => {
@@ -54,16 +60,47 @@ const TowerOfHanoi = () => {
         newRods[selectedRod] = sourceRod.slice(0, -1);
         newRods[rodIndex] = [...targetRod, diskToMove];
 
+        const newMoves = gameState.moves + 1;
+        
         setGameState(prev => ({
           ...prev,
           rods: newRods,
           selectedRod: null,
-          moves: prev.moves + 1
+          moves: newMoves
         }));
+        
+        // Check if game is completed
+        if (newRods[2].length === 3) {
+          setGameCompleted(true);
+          handleGameComplete(newMoves);
+        }
       } else {
         // Invalid move
         setGameState(prev => ({ ...prev, selectedRod: null }));
       }
+    }
+  };
+
+  const handleGameComplete = async (moves: number) => {
+    try {
+      // Calculate score based on moves (lower moves = higher score)
+      // Max score is 100, min score is 0
+      const maxMoves = gameState.minMoves * 2; // Allow double the minimum moves
+      const score = Math.max(0, Math.min(100, Math.round(100 - ((moves - gameState.minMoves) / (maxMoves - gameState.minMoves)) * 100)));
+      
+      // Save score to Firebase
+      if (user) {
+        await updateUserScore('towerOfHanoi', score);
+        setMessage(`Congratulations! Your score of ${score}% has been saved to the leaderboard!`);
+      } else {
+        setMessage('You must be registered to save your score.');
+      }
+      
+      setOpenSnackbar(true);
+    } catch (error) {
+      console.error('Error saving score:', error);
+      setMessage('Failed to save your score. Please try again.');
+      setOpenSnackbar(true);
     }
   };
 
@@ -75,8 +112,8 @@ const TowerOfHanoi = () => {
     navigate('/games');
   };
 
-  const isGameComplete = () => {
-    return gameState.rods[2].length === 3;
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   return (
@@ -132,7 +169,7 @@ const TowerOfHanoi = () => {
           </Box>
 
           <Box sx={{ textAlign: 'center' }}>
-            {isGameComplete() ? (
+            {gameCompleted ? (
               <Typography variant="h5" gutterBottom>
                 Congratulations! You solved the puzzle!
               </Typography>
@@ -164,6 +201,17 @@ const TowerOfHanoi = () => {
           </Box>
         </Paper>
       </Box>
+      
+      <Snackbar 
+        open={openSnackbar} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="info" sx={{ width: '100%' }}>
+          {message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

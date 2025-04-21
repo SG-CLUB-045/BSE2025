@@ -10,6 +10,7 @@ import TechnicalQuiz from './games/TechnicalQuiz';
 import TicTacToe from './games/TicTacToe';
 import TowerOfHanoi from './games/TowerOfHanoi';
 import WordScramble from './games/WordScramble';
+import { UserProvider } from './context/UserContext';
 
 const theme = createTheme({
   palette: {
@@ -26,18 +27,20 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Registration />} />
-          <Route path="/games" element={<Games />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/games/technical-quiz" element={<TechnicalQuiz />} />
-          <Route path="/games/tic-tac-toe" element={<TicTacToe />} />
-          <Route path="/games/tower-of-hanoi" element={<TowerOfHanoi />} />
-          <Route path="/games/word-scramble" element={<WordScramble />} />
-        </Routes>
-      </Router>
+      <UserProvider>
+        <Router>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<Registration />} />
+            <Route path="/games" element={<Games />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/games/technical-quiz" element={<TechnicalQuiz />} />
+            <Route path="/games/tic-tac-toe" element={<TicTacToe />} />
+            <Route path="/games/tower-of-hanoi" element={<TowerOfHanoi />} />
+            <Route path="/games/word-scramble" element={<WordScramble />} />
+          </Routes>
+        </Router>
+      </UserProvider>
     </ThemeProvider>
   );
 }

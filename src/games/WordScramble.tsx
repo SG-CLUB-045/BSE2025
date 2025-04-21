@@ -8,9 +8,11 @@ import {
   TextField, 
   CircularProgress,
   Alert,
-  Snackbar
+  Snackbar,
+  LinearProgress
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 
 // Function to scramble a word
 const scrambleWord = (word: string): string => {
@@ -46,17 +48,18 @@ const generateWordWithGemini = async (): Promise<string> => {
 
 const WordScramble = () => {
   const navigate = useNavigate();
+  const { user, updateUserScore } = useUser();
   const [gameState, setGameState] = useState({
-    originalWord: '',
-    scrambledWord: '',
+    words: [] as string[],
+    scrambledWords: [] as string[],
+    currentWordIndex: 0,
     userInput: '',
     score: 0,
-    attempts: 0,
-    maxAttempts: 3,
     isLoading: false,
     message: '',
     showMessage: false,
-    messageType: 'info' as 'success' | 'error' | 'info' | 'warning'
+    messageType: 'info' as 'success' | 'error' | 'info' | 'warning',
+    gameCompleted: false
   });
 
   useEffect(() => {
@@ -67,22 +70,31 @@ const WordScramble = () => {
     setGameState(prev => ({ ...prev, isLoading: true }));
     
     try {
-      const word = await generateWordWithGemini();
-      const scrambled = scrambleWord(word);
+      // Generate 5 random words
+      const words: string[] = [];
+      const scrambledWords: string[] = [];
+      
+      for (let i = 0; i < 5; i++) {
+        const word = await generateWordWithGemini();
+        words.push(word);
+        scrambledWords.push(scrambleWord(word));
+      }
       
       setGameState(prev => ({
         ...prev,
-        originalWord: word,
-        scrambledWord: scrambled,
+        words,
+        scrambledWords,
+        currentWordIndex: 0,
         userInput: '',
+        score: 0,
         isLoading: false,
-        attempts: 0
+        gameCompleted: false
       }));
     } catch (error) {
       setGameState(prev => ({
         ...prev,
         isLoading: false,
-        message: 'Failed to generate word. Please try again.',
+        message: 'Failed to generate words. Please try again.',
         showMessage: true,
         messageType: 'error'
       }));
@@ -93,45 +105,86 @@ const WordScramble = () => {
     setGameState(prev => ({ ...prev, userInput: e.target.value.toUpperCase() }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const { userInput, originalWord, attempts, maxAttempts, score } = gameState;
+    const { userInput, words, currentWordIndex, score } = gameState;
+    const currentWord = words[currentWordIndex];
     
-    if (userInput === originalWord) {
-      // Correct answer
+    if (userInput === currentWord) {
+      // Correct answer - add 20 points
+      const newScore = score + 20;
+      
       setGameState(prev => ({
         ...prev,
-        score: prev.score + 1,
-        message: 'Correct! Well done!',
+        score: newScore,
+        message: 'Correct! +20 points!',
         showMessage: true,
         messageType: 'success'
       }));
       
-      // Start a new game after a short delay
-      setTimeout(startNewGame, 1500);
+      // Move to next word or complete game
+      if (currentWordIndex < words.length - 1) {
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            currentWordIndex: prev.currentWordIndex + 1,
+            userInput: ''
+          }));
+        }, 1500);
+      } else {
+        // Game completed
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            gameCompleted: true
+          }));
+          
+          // Save score to Firebase if user is registered
+          if (user) {
+            try {
+              updateUserScore('wordScramble', newScore);
+            } catch (error) {
+              console.error('Error saving score:', error);
+            }
+          }
+        }, 1500);
+      }
     } else {
       // Incorrect answer
-      const newAttempts = attempts + 1;
+      setGameState(prev => ({
+        ...prev,
+        message: `Incorrect! The word was: ${currentWord}`,
+        showMessage: true,
+        messageType: 'error'
+      }));
       
-      if (newAttempts >= maxAttempts) {
-        // Game over
-        setGameState(prev => ({
-          ...prev,
-          attempts: newAttempts,
-          message: `Game over! The word was: ${originalWord}`,
-          showMessage: true,
-          messageType: 'error'
-        }));
+      // Move to next word or complete game
+      if (currentWordIndex < words.length - 1) {
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            currentWordIndex: prev.currentWordIndex + 1,
+            userInput: ''
+          }));
+        }, 2000);
       } else {
-        // Try again
-        setGameState(prev => ({
-          ...prev,
-          attempts: newAttempts,
-          message: `Incorrect! Try again. ${maxAttempts - newAttempts} attempts left.`,
-          showMessage: true,
-          messageType: 'warning'
-        }));
+        // Game completed
+        setTimeout(() => {
+          setGameState(prev => ({
+            ...prev,
+            gameCompleted: true
+          }));
+          
+          // Save score to Firebase if user is registered
+          if (user) {
+            try {
+              updateUserScore('wordScramble', score);
+            } catch (error) {
+              console.error('Error saving score:', error);
+            }
+          }
+        }, 2000);
       }
     }
   };
@@ -148,6 +201,16 @@ const WordScramble = () => {
     setGameState(prev => ({ ...prev, showMessage: false }));
   };
 
+  const { 
+    words, 
+    scrambledWords, 
+    currentWordIndex, 
+    userInput, 
+    score, 
+    isLoading, 
+    gameCompleted 
+  } = gameState;
+
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 4, mb: 4 }}>
@@ -158,16 +221,51 @@ const WordScramble = () => {
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="h6" align="center">
-              Score: {gameState.score} | Attempts: {gameState.attempts}/{gameState.maxAttempts}
+              Score: {score} | Word: {currentWordIndex + 1}/5
             </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={(currentWordIndex / 5) * 100} 
+              sx={{ mt: 1, height: 10, borderRadius: 5 }}
+            />
           </Box>
 
-          {gameState.isLoading ? (
+          {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
               <CircularProgress />
               <Typography variant="h6" sx={{ ml: 2 }}>
-                Generating word...
+                Generating words...
               </Typography>
+            </Box>
+          ) : gameCompleted ? (
+            <Box sx={{ textAlign: 'center', my: 4 }}>
+              <Typography variant="h5" gutterBottom>
+                Game Completed!
+              </Typography>
+              <Typography variant="h4" gutterBottom color="primary">
+                Final Score: {score}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {user 
+                  ? `Your score has been saved to the leaderboard!` 
+                  : `You must be registered to save your score.`}
+              </Typography>
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleReset}
+                >
+                  Play Again
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={handleFinish}
+                >
+                  Return to Games
+                </Button>
+              </Box>
             </Box>
           ) : (
             <>
@@ -189,7 +287,7 @@ const WordScramble = () => {
                     my: 2
                   }}
                 >
-                  {gameState.scrambledWord}
+                  {scrambledWords[currentWordIndex]}
                 </Typography>
               </Box>
 
@@ -198,7 +296,7 @@ const WordScramble = () => {
                   fullWidth
                   label="Your answer"
                   variant="outlined"
-                  value={gameState.userInput}
+                  value={userInput}
                   onChange={handleInputChange}
                   sx={{ mb: 2 }}
                 />
@@ -207,31 +305,13 @@ const WordScramble = () => {
                   variant="contained"
                   color="primary"
                   fullWidth
-                  disabled={!gameState.userInput}
+                  disabled={!userInput}
                 >
                   Submit
                 </Button>
               </Box>
             </>
           )}
-
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleReset}
-              disabled={gameState.isLoading}
-            >
-              New Word
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={handleFinish}
-            >
-              Return to Games
-            </Button>
-          </Box>
         </Paper>
       </Box>
 

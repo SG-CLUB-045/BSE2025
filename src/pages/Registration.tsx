@@ -3,9 +3,11 @@ import { Container, Paper, TextField, Button, Typography, Box, Alert, Snackbar }
 import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useUser } from '../context/UserContext';
 
 const Registration = () => {
   const navigate = useNavigate();
+  const { setCurrentUser } = useUser();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,20 +39,27 @@ const Registration = () => {
       }
       
       // Add user data to Firestore
-      const usersCollection = collection(db, 'users');
-      await addDoc(usersCollection, {
+      const userRef = await addDoc(collection(db, 'users'), {
         name: formData.name,
         email: formData.email,
         mobileNumber: formData.mobileNumber,
         age: parseInt(formData.age),
-        createdAt: new Date()
+        createdAt: new Date(),
+        scores: {
+          technicalQuiz: 0,
+          towerOfHanoi: 0,
+          wordScramble: 0
+        }
       });
+      
+      // Set the newly registered user as the current user
+      await setCurrentUser(userRef.id);
       
       // Navigate to games page on success
       navigate('/games');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
       setOpenSnackbar(true);
     } finally {
       setLoading(false);
