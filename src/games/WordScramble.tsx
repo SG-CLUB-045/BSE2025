@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Container, 
   Paper, 
@@ -9,7 +9,16 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
-  LinearProgress
+  LinearProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Stepper,
+  Step,
+  StepLabel,
+  SelectChangeEvent
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -22,33 +31,75 @@ const scrambleWord = (word: string): string => {
     .join('');
 };
 
-// Function to generate a word using Gemini API
-const generateWordWithGemini = async (): Promise<string> => {
+// Function to generate words using Gemini API
+const generateWordsWithGemini = async (difficulty: string): Promise<string[]> => {
   try {
-    // This is a placeholder for the actual Gemini API call
-    // In a real implementation, you would use the Gemini API client
-    // For now, we'll simulate the API call with a timeout
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // List of sample words for demonstration
-        const words = [
-          'JAVASCRIPT', 'REACT', 'TYPESCRIPT', 'PROGRAMMING', 'ALGORITHM',
-          'DATABASE', 'FUNCTION', 'VARIABLE', 'COMPONENT', 'DEVELOPER',
-          'FRONTEND', 'BACKEND', 'FULLSTACK', 'API', 'FRAMEWORK'
-        ];
-        const randomWord = words[Math.floor(Math.random() * words.length)];
-        resolve(randomWord);
-      }, 1000);
+    const GEMINI_API_KEY = 'AIzaSyCpI0Dr4ZwiCfgv3LB_598oDO6eAsXkVEE';
+
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key is not configured');
+    }
+
+    const prompt = `Generate 5 ${difficulty} difficulty level words for a word scramble game. 
+    The words should be appropriate for the difficulty level with these exact lengths:
+    - Easy: 4-5 letters, common words (e.g., "book", "tree", "fish")
+    - Medium: 5-6 letters, slightly challenging words (e.g., "apple", "house", "water")
+    - Hard: 7-8 letters, complex or technical words (e.g., "program", "network", "science")
+    
+    Make sure all words are:
+    1. Valid English words
+    2. Within the specified length range for the difficulty level
+    3. Not too obscure or difficult to spell
+    4. Appropriate for a word scramble game
+    
+    Return the words in this exact JSON format:
+    {
+      "words": ["word1", "word2", "word3", "word4", "word5"]
+    }`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
     });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch from Gemini API');
+    }
+
+    const data = await response.json();
+    const generatedText = data.candidates[0].content.parts[0].text;
+    
+    // Extract the JSON from the response
+    const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Invalid response format from Gemini API');
+    }
+
+    const parsedResponse = JSON.parse(jsonMatch[0]);
+    return parsedResponse.words.map((word: string) => word.toUpperCase());
+
   } catch (error) {
-    console.error('Error generating word:', error);
-    return 'ERROR';
+    console.error('Error generating words:', error);
+    throw new Error('Failed to generate words. Please try again.');
   }
 };
 
 const WordScramble = () => {
   const navigate = useNavigate();
   const { user, updateUserScore } = useUser();
+  const [activeStep, setActiveStep] = useState(0);
+  const [gameConfig, setGameConfig] = useState({
+    difficulty: 'medium'
+  });
   const [gameState, setGameState] = useState({
     words: [] as string[],
     scrambledWords: [] as string[],
@@ -59,26 +110,24 @@ const WordScramble = () => {
     message: '',
     showMessage: false,
     messageType: 'info' as 'success' | 'error' | 'info' | 'warning',
-    gameCompleted: false
+    gameCompleted: false,
+    error: false
   });
 
-  useEffect(() => {
-    startNewGame();
-  }, []);
+  const handleConfigChange = (e: SelectChangeEvent<string>) => {
+    setGameConfig(prev => ({
+      ...prev,
+      difficulty: e.target.value
+    }));
+  };
 
   const startNewGame = async () => {
-    setGameState(prev => ({ ...prev, isLoading: true }));
+    setGameState(prev => ({ ...prev, isLoading: true, error: false }));
     
     try {
-      // Generate 5 random words
-      const words: string[] = [];
-      const scrambledWords: string[] = [];
-      
-      for (let i = 0; i < 5; i++) {
-        const word = await generateWordWithGemini();
-        words.push(word);
-        scrambledWords.push(scrambleWord(word));
-      }
+      // Generate 5 random words based on difficulty
+      const words = await generateWordsWithGemini(gameConfig.difficulty);
+      const scrambledWords = words.map(word => scrambleWord(word));
       
       setGameState(prev => ({
         ...prev,
@@ -88,15 +137,18 @@ const WordScramble = () => {
         userInput: '',
         score: 0,
         isLoading: false,
-        gameCompleted: false
+        gameCompleted: false,
+        error: false
       }));
+      setActiveStep(1);
     } catch (error) {
       setGameState(prev => ({
         ...prev,
         isLoading: false,
         message: 'Failed to generate words. Please try again.',
         showMessage: true,
-        messageType: 'error'
+        messageType: 'error',
+        error: true
       }));
     }
   };
@@ -190,7 +242,20 @@ const WordScramble = () => {
   };
 
   const handleReset = () => {
-    startNewGame();
+    setActiveStep(0);
+    setGameConfig({
+      difficulty: 'medium'
+    });
+    setGameState(prev => ({
+      ...prev,
+      words: [],
+      scrambledWords: [],
+      currentWordIndex: 0,
+      userInput: '',
+      score: 0,
+      gameCompleted: false,
+      error: false
+    }));
   };
 
   const handleFinish = () => {
@@ -208,8 +273,11 @@ const WordScramble = () => {
     userInput, 
     score, 
     isLoading, 
-    gameCompleted 
+    gameCompleted,
+    error
   } = gameState;
+
+  const steps = ['Configure Game', 'Play Game'];
 
   return (
     <Container maxWidth="md">
@@ -219,56 +287,69 @@ const WordScramble = () => {
             Word Scramble
           </Typography>
 
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" align="center">
-              Score: {score} | Word: {currentWordIndex + 1}/5
-            </Typography>
-            <LinearProgress 
-              variant="determinate" 
-              value={(currentWordIndex / 5) * 100} 
-              sx={{ mt: 1, height: 10, borderRadius: 5 }}
-            />
-          </Box>
+          <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
 
-          {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-              <CircularProgress />
-              <Typography variant="h6" sx={{ ml: 2 }}>
-                Generating words...
+          {activeStep === 0 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Configure Your Game
               </Typography>
-            </Box>
-          ) : gameCompleted ? (
-            <Box sx={{ textAlign: 'center', my: 4 }}>
-              <Typography variant="h5" gutterBottom>
-                Game Completed!
-              </Typography>
-              <Typography variant="h4" gutterBottom color="primary">
-                Final Score: {score}
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                {user 
-                  ? `Your score has been saved to the leaderboard!` 
-                  : `You must be registered to save your score.`}
-              </Typography>
-              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleReset}
+              
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel id="difficulty-label">Difficulty</InputLabel>
+                <Select
+                  labelId="difficulty-label"
+                  name="difficulty"
+                  value={gameConfig.difficulty}
+                  onChange={handleConfigChange}
+                  label="Difficulty"
                 >
-                  Play Again
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={handleFinish}
-                >
-                  Return to Games
-                </Button>
-              </Box>
+                  <MenuItem value="easy">Easy</MenuItem>
+                  <MenuItem value="medium">Medium</MenuItem>
+                  <MenuItem value="hard">Hard</MenuItem>
+                </Select>
+                <FormHelperText>Select the difficulty level of the words</FormHelperText>
+              </FormControl>
+              
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={startNewGame}
+                disabled={isLoading}
+                fullWidth
+                size="large"
+              >
+                {isLoading ? 'Generating Words...' : 'Start Game'}
+              </Button>
+              
+              {isLoading && (
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
+                  <CircularProgress size={24} sx={{ mr: 1 }} />
+                  <Typography>Generating words using AI...</Typography>
+                </Box>
+              )}
             </Box>
-          ) : (
+          )}
+
+          {activeStep === 1 && !gameCompleted && (
             <>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="h6" align="center">
+                  Score: {score} | Word: {currentWordIndex + 1}/5
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={((currentWordIndex + 1) / 5) * 100} 
+                  sx={{ mt: 1, height: 10, borderRadius: 5 }}
+                />
+              </Box>
+
               <Box sx={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
@@ -311,6 +392,38 @@ const WordScramble = () => {
                 </Button>
               </Box>
             </>
+          )}
+
+          {activeStep === 1 && gameCompleted && (
+            <Box sx={{ textAlign: 'center', my: 4 }}>
+              <Typography variant="h5" gutterBottom>
+                Game Completed!
+              </Typography>
+              <Typography variant="h4" gutterBottom color="primary">
+                Final Score: {score}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {user 
+                  ? `Your score has been saved to the leaderboard!` 
+                  : `You must be registered to save your score.`}
+              </Typography>
+              <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleReset}
+                >
+                  Play Again
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={handleFinish}
+                >
+                  Return to Games
+                </Button>
+              </Box>
+            </Box>
           )}
         </Paper>
       </Box>
